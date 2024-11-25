@@ -10,9 +10,11 @@ import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Duration, RemovalPolicy } from "aws-cdk-lib";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
-
 import { Construct } from "constructs";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
+
+// const s3Client = new S3Client({ region: "your-region" });
 
 export class EDAAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -24,7 +26,7 @@ export class EDAAppStack extends cdk.Stack {
       autoDeleteObjects: true,
       publicReadAccess: false,
     });
-
+    const name = imagesBucket.bucketName
     //Queues
 
     //invalid image que
@@ -141,7 +143,7 @@ export class EDAAppStack extends cdk.Stack {
     // imagesBucket.grantReadWrite(generateImageFn);
 
     //adding role policies for mails
-    
+
     mailerFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
