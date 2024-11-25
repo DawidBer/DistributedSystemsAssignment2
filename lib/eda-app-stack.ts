@@ -76,6 +76,7 @@ export class EDAAppStack extends cdk.Stack {
     //   timeout: Duration.seconds(10),
     //   memorySize: 128,
     // });
+    
     const badImagesFn = new NodejsFunction(this, "BadImagesFn", {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_16_X,

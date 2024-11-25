@@ -38,7 +38,7 @@ export const handler: SQSHandler = async (event: any) => {
           const { name, email, message }: ContactDetails = {
             name: "The Photo Album",
             email: SES_EMAIL_FROM,
-            message: `The submitted image wasn't added to the list`,
+            message: `The submitted image wasn't added to the list due to invalid extension`,
           };
           const params = sendEmailParams({ name, email, message });
           await client.send(new SendEmailCommand(params));
