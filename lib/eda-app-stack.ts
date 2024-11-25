@@ -48,6 +48,11 @@ export class EDAAppStack extends cdk.Stack {
       receiveMessageWaitTime: cdk.Duration.seconds(10),
     });
 
+    //rejection mailer queue
+    const rejectionMailerQ = new sqs.Queue(this, "rejection-mailer-queue", {
+      receiveMessageWaitTime: cdk.Duration.seconds(10),
+    })
+
     // Lambda functions
 
     const processImageFn = new lambdanode.NodejsFunction(
@@ -84,6 +89,13 @@ export class EDAAppStack extends cdk.Stack {
       entry: `${__dirname}/../lambdas/mailer.ts`,
     });
 
+    const rejectionMailerFn = new lambdanode.NodejsFunction(this, "rejection-mailer-function", {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      memorySize: 1024,
+      timeout: cdk.Duration.seconds(3),
+      entry: `${__dirname}/../lambdas/rejectionMailer.ts`,
+    });
+
     // S3 --> SQS
     imagesBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
@@ -94,6 +106,7 @@ export class EDAAppStack extends cdk.Stack {
   newImageTopic.addSubscription(new subs.SqsSubscription(imageProcessQueue));
   newImageTopic.addSubscription(new subs.SqsSubscription(mailerQ));
   newImageTopic.addSubscription(new subs.SqsSubscription(badImagesQueue));
+  newImageTopic.addSubscription(new subs.SqsSubscription(rejectionMailerQ));
 
    // SQS --> Lambda
     const newImageEventSource = new events.SqsEventSource(imageProcessQueue, {
@@ -109,19 +122,39 @@ export class EDAAppStack extends cdk.Stack {
     const BadImageEventSource = new events.SqsEventSource(badImagesQueue, {
       batchSize: 5,
       maxBatchingWindow: cdk.Duration.seconds(5),
-    })
+    });
+
+    const rejectionMailerSource = new events.SqsEventSource(rejectionMailerQ, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(5),
+    });
 
     //Triggers
     processImageFn.addEventSource(newImageEventSource);
     badImagesFn.addEventSource(BadImageEventSource);
     mailerFn.addEventSource(newImageMailEventSource);
+    rejectionMailerFn.addEventSource(rejectionMailerSource);
 
     // Permissions
 
     imagesBucket.grantReadWrite(processImageFn);
     // imagesBucket.grantReadWrite(generateImageFn);
 
+    //adding role policies for mails
+    
     mailerFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+          "ses:SendTemplatedEmail",
+        ],
+        resources: ["*"],
+      })
+    );
+
+    rejectionMailerFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
