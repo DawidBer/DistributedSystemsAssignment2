@@ -8,6 +8,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as iam from "aws-cdk-lib/aws-iam";
+import { Duration, RemovalPolicy } from "aws-cdk-lib";
 
 import { Construct } from "constructs";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
@@ -16,14 +17,26 @@ export class EDAAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    //bucket
     const imagesBucket = new s3.Bucket(this, "images", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: false,
     });
 
+    //Queues
+
+    //invalid image que
+    const badImagesQueue = new sqs.Queue(this, "bad-img-q", {
+      retentionPeriod: Duration.minutes(10),
+    });
+
     const imageProcessQueue = new sqs.Queue(this, "img-created-queue", {
       receiveMessageWaitTime: cdk.Duration.seconds(10),
+      deadLetterQueue: {
+        queue: badImagesQueue,
+        maxReceiveCount: 1,
+      },
     });
 
     const newImageTopic = new sns.Topic(this, "NewImageTopic", {
@@ -60,10 +73,8 @@ export class EDAAppStack extends cdk.Stack {
       new s3n.SnsDestination(newImageTopic)  // Changed
   );
 
-  newImageTopic.addSubscription(
-    new subs.SqsSubscription(imageProcessQueue)
-  );
-
+  //que subscriptions
+  newImageTopic.addSubscription(new subs.SqsSubscription(imageProcessQueue));
   newImageTopic.addSubscription(new subs.SqsSubscription(mailerQ));
 
    // SQS --> Lambda
@@ -77,8 +88,8 @@ export class EDAAppStack extends cdk.Stack {
       maxBatchingWindow: cdk.Duration.seconds(5),
     }); 
 
+    //Triggers
     processImageFn.addEventSource(newImageEventSource);
-
     mailerFn.addEventSource(newImageMailEventSource);
 
     // Permissions
