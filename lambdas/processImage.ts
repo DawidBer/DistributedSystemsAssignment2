@@ -7,6 +7,7 @@ import {
   S3Client,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import { BadImage } from "shared/types";
 
 const s3 = new S3Client();
 
@@ -32,6 +33,14 @@ export const handler: SQSHandler = async (event) => {
           };
           origimage = await s3.send(new GetObjectCommand(params));
           // Process the image ......
+          const contentType = origimage.ContentType;
+          if(contentType != "image/jpeg")
+          { 
+            const BadImage = contentType as BadImage;
+            console.log("Bad Image", BadImage);
+            throw new Error("Bad Image");
+          }
+
         } catch (error) {
           console.log(error);
         }

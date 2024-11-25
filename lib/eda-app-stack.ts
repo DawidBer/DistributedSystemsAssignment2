@@ -9,6 +9,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Duration, RemovalPolicy } from "aws-cdk-lib";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
 import { Construct } from "constructs";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
@@ -60,6 +61,22 @@ export class EDAAppStack extends cdk.Stack {
       }
     );
 
+    // //Generate image
+    // const generateImageFn = new NodejsFunction(this, "GenerateImageFn", {
+    //   architecture: lambda.Architecture.ARM_64,
+    //   runtime: lambda.Runtime.NODEJS_18_X,
+    //   entry: `${__dirname}/../lambdas/generateImage.ts`,
+    //   timeout: Duration.seconds(10),
+    //   memorySize: 128,
+    // });
+    const badImagesFn = new NodejsFunction(this, "BadImagesFn", {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_16_X,
+      entry: `${__dirname}/../lambdas/handleBadImages.ts`,
+      timeout: Duration.seconds(10),
+      memorySize: 128,
+    });
+
     const mailerFn = new lambdanode.NodejsFunction(this, "mailer-function", {
       runtime: lambda.Runtime.NODEJS_16_X,
       memorySize: 1024,
@@ -76,6 +93,7 @@ export class EDAAppStack extends cdk.Stack {
   //que subscriptions
   newImageTopic.addSubscription(new subs.SqsSubscription(imageProcessQueue));
   newImageTopic.addSubscription(new subs.SqsSubscription(mailerQ));
+  newImageTopic.addSubscription(new subs.SqsSubscription(badImagesQueue));
 
    // SQS --> Lambda
     const newImageEventSource = new events.SqsEventSource(imageProcessQueue, {
@@ -88,13 +106,20 @@ export class EDAAppStack extends cdk.Stack {
       maxBatchingWindow: cdk.Duration.seconds(5),
     }); 
 
+    const BadImageEventSource = new events.SqsEventSource(badImagesQueue, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(5),
+    })
+
     //Triggers
     processImageFn.addEventSource(newImageEventSource);
+    badImagesFn.addEventSource(BadImageEventSource);
     mailerFn.addEventSource(newImageMailEventSource);
 
     // Permissions
 
-    imagesBucket.grantRead(processImageFn);
+    imagesBucket.grantReadWrite(processImageFn);
+    // imagesBucket.grantReadWrite(generateImageFn);
 
     mailerFn.addToRolePolicy(
       new iam.PolicyStatement({
