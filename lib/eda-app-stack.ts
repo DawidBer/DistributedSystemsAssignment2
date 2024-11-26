@@ -42,12 +42,21 @@ export class EDAAppStack extends cdk.Stack {
       retentionPeriod: Duration.minutes(10),
     });
 
+    const updateMetaDataQueue = new sqs.Queue(this, "updateMetaDataQueue", {
+      receiveMessageWaitTime: cdk.Duration.seconds(10),
+    })
+
     const imageProcessQueue = new sqs.Queue(this, "img-created-queue", {
       receiveMessageWaitTime: cdk.Duration.seconds(10),
       deadLetterQueue: {
         queue: badImagesQueue,
         maxReceiveCount: 1,
       },
+    });
+
+    //metadata topic 
+    const metadataUpdateTopic = new sns.Topic(this, "MetaDataUpdateTopic", {
+      displayName: "Metadata Update Topic",
     });
 
     const newImageTopic = new sns.Topic(this, "NewImageTopic", {
@@ -71,6 +80,18 @@ export class EDAAppStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         entry: `${__dirname}/../lambdas/processImage.ts`,
+        timeout: cdk.Duration.seconds(15),
+        memorySize: 128,
+        environment: { IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName}
+      }
+    );
+
+    const updateImageTableFn = new lambdanode.NodejsFunction(
+      this,
+      "UpdateImageTableFn",
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/updateTable.ts`,
         timeout: cdk.Duration.seconds(15),
         memorySize: 128,
         environment: { IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName}
@@ -119,6 +140,8 @@ export class EDAAppStack extends cdk.Stack {
   newImageTopic.addSubscription(new subs.SqsSubscription(mailerQ));
   newImageTopic.addSubscription(new subs.SqsSubscription(badImagesQueue));
   newImageTopic.addSubscription(new subs.SqsSubscription(rejectionMailerQ));
+  metadataUpdateTopic.addSubscription(new subs.SqsSubscription(updateMetaDataQueue));
+
 
    // SQS --> Lambda
     const newImageEventSource = new events.SqsEventSource(imageProcessQueue, {
@@ -141,17 +164,28 @@ export class EDAAppStack extends cdk.Stack {
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 
+    const updateMetaData = new events.SqsEventSource(updateMetaDataQueue, {
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(5),
+    });
+
+
+
     //Triggers
+    updateImageTableFn.addEventSource(updateMetaData);
     processImageFn.addEventSource(newImageEventSource);
     badImagesFn.addEventSource(BadImageEventSource);
     mailerFn.addEventSource(newImageMailEventSource);
     rejectionMailerFn.addEventSource(rejectionMailerSource);
+
+
 
     // Permissions
 
     imagesBucket.grantReadWrite(processImageFn);
     imageUploadsTable.grantReadWriteData(processImageFn);
     imageUploadsTable.grantWriteData(processImageFn);
+    imageUploadsTable.grantReadWriteData(updateImageTableFn);
     // imagesBucket.grantReadWrite(generateImageFn);
 
     //adding role policies for mails
