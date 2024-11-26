@@ -133,7 +133,12 @@ export class EDAAppStack extends cdk.Stack {
     imagesBucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3n.SnsDestination(newImageTopic)  // Changed
-  );
+    );
+
+    imagesBucket.addEventNotification(
+      s3.EventType.OBJECT_REMOVED,
+      new s3n.SnsDestination(newImageTopic)
+    );
 
   //que subscriptions
   newImageTopic.addSubscription(new subs.SqsSubscription(imageProcessQueue));
