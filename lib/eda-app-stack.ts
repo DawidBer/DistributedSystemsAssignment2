@@ -12,6 +12,7 @@ import { Duration, RemovalPolicy } from "aws-cdk-lib";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 // const s3Client = new S3Client({ region: "your-region" });
@@ -19,6 +20,14 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 export class EDAAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    //creating images table
+    const imageUploadsTable = new dynamodb.Table(this, "ImageUploadsTable", {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: { name: "fileName", type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      tableName: "ImageUploadsTable",
+    });
 
     //bucket
     const imagesBucket = new s3.Bucket(this, "images", {
@@ -65,6 +74,7 @@ export class EDAAppStack extends cdk.Stack {
         entry: `${__dirname}/../lambdas/processImage.ts`,
         timeout: cdk.Duration.seconds(15),
         memorySize: 128,
+        environment: { IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName}
       }
     );
 
@@ -76,7 +86,7 @@ export class EDAAppStack extends cdk.Stack {
     //   timeout: Duration.seconds(10),
     //   memorySize: 128,
     // });
-    
+
     const badImagesFn = new NodejsFunction(this, "BadImagesFn", {
       architecture: lambda.Architecture.ARM_64,
       runtime: lambda.Runtime.NODEJS_16_X,
@@ -141,6 +151,8 @@ export class EDAAppStack extends cdk.Stack {
     // Permissions
 
     imagesBucket.grantReadWrite(processImageFn);
+    imageUploadsTable.grantReadWriteData(processImageFn);
+    imageUploadsTable.grantWriteData(processImageFn);
     // imagesBucket.grantReadWrite(generateImageFn);
 
     //adding role policies for mails

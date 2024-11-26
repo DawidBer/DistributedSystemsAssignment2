@@ -8,8 +8,16 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { BadImage } from "shared/types";
+import { DynamoDB, DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { table } from "console";
 
 const s3 = new S3Client();
+const tableName = process.env.IMAGEUPLOADSDB_TABLE;
+const region = 'eu-west-1';
+const dynamoDBClient = new DynamoDBClient({ region });
+const docClient = DynamoDBDocumentClient.from(dynamoDBClient);
+
 
 export const handler: SQSHandler = async (event) => {
   console.log("Event ", JSON.stringify(event));
@@ -34,11 +42,28 @@ export const handler: SQSHandler = async (event) => {
           origimage = await s3.send(new GetObjectCommand(params));
           // Process the image ......
           const contentType = origimage.ContentType;
+          const originalFileName = srcKey.split("/").pop();
+
+          const putParams = {
+            TableName: tableName,
+            Item: {
+              fileName: originalFileName
+            },
+          };
+
+          console.log("Table Name: ", tableName);
+
+          console.log("PutParams: ", JSON.stringify(putParams));
 
           if(contentType == "image/jpeg" || contentType == "image/png")
           { 
             //Log image upload in DynamoDB table
-
+            try {
+            await docClient.send(new PutCommand(putParams));
+            console.log("Successfully logged image upload");
+            } catch (error) {
+              console.error("Error writing to dynamodb:", error);
+            }
           } else {
             const BadImage = contentType as BadImage;
             console.log("Bad Image", BadImage);
