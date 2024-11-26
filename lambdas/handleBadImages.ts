@@ -1,6 +1,8 @@
 import { SQSHandler } from "aws-lambda";
 import { BadImage } from './../shared/types'
 
+//marking body as bad image
+
 export const handler: SQSHandler = async (event) => {
   try {
     console.log("Event: ", JSON.stringify(event));
@@ -12,4 +14,3 @@ export const handler: SQSHandler = async (event) => {
     console.log(JSON.stringify(error));
   }
 };
-//bad Image handler

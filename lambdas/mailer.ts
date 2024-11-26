@@ -39,8 +39,12 @@ export const handler: SQSHandler = async (event: any) => {
             email: SES_EMAIL_FROM,
             message: `We received your Image. Its URL is s3://${srcBucket}/${srcKey}`,
           };
+          if(srcKey.includes("jpeg") || srcKey.includes("png"))
+          {
           const params = sendEmailParams({ name, email, message });
           await client.send(new SendEmailCommand(params));
+
+          } 
         } catch (error: unknown) {
           console.log("ERROR is: ", error);
           // return;

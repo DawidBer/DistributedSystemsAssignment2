@@ -79,8 +79,6 @@ export const handler: SQSHandler = async (event) => {
               console.log("Successfully logged image upload");
 
             } else {
-              // const BadImage = contentType as BadImage;
-              // console.log("Bad Image", BadImage);
               throw new Error("Bad Image");
             }
           } 
@@ -92,28 +90,6 @@ export const handler: SQSHandler = async (event) => {
           } else {
             console.log("Unexpected message");
           }
-
-          // if(contentType == "image/jpeg" || contentType == "image/png")
-          // { 
-          //   //Log image upload in DynamoDB table
-          //   try {
-
-          //   await docClient.send(new PutCommand(putParams));
-
-          //   console.log("Successfully logged image upload");
-
-          //   } catch (error) {
-
-          //     console.error("Error writing to dynamodb:", error);
-          //   }
-          // } else {
-
-          //   const BadImage = contentType as BadImage;
-
-          //   console.log("Bad Image", BadImage);
-
-          //   throw new Error("Bad Image");
-          // }
         } catch (error) {
           console.log(error);
         }
