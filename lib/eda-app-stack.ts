@@ -97,32 +97,6 @@ export class EDAAppStack extends cdk.Stack {
         environment: { IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName}
       }
     );
-    
-
-    // //added
-    // const mailerImageRejectedFn = new lambdanode.NodejsFunction(this, "MailerImageRejectedFn", {
-    //   runtime: lambda.Runtime.NODEJS_16_X,
-    //   memorySize: 1024,
-    //   timeout: cdk.Duration.seconds(3),
-    //   entry: `${__dirname}/../lambdas/rejectionMailer.ts`,
-    // });
-
-    // //added
-    // const mailerImageAddedFn = new lambdanode.NodejsFunction(this, "MailerImageAddedFn", {
-    //   runtime: lambda.Runtime.NODEJS_16_X,
-    //   memorySize: 1024,
-    //   timeout: cdk.Duration.seconds(3),
-    //   entry: `${__dirname}/../lambdas/mailer.ts`,
-    // });
-
-    // //Generate image
-    // const generateImageFn = new NodejsFunction(this, "GenerateImageFn", {
-    //   architecture: lambda.Architecture.ARM_64,
-    //   runtime: lambda.Runtime.NODEJS_18_X,
-    //   entry: `${__dirname}/../lambdas/generateImage.ts`,
-    //   timeout: Duration.seconds(10),
-    //   memorySize: 128,
-    // });
 
     const badImagesFn = new NodejsFunction(this, "BadImagesFn", {
       architecture: lambda.Architecture.ARM_64,
