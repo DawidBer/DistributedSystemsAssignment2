@@ -40,7 +40,7 @@ export const handler: SQSHandler = async (event) => {
             Key: srcKey,
           };
           origimage = await s3.send(new GetObjectCommand(params));
-          // Process the image ......
+          // Process the image ....
           const contentType = origimage.ContentType;
           const originalFileName = srcKey.split("/").pop();
 

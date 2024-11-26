@@ -12,3 +12,4 @@ export const handler: SQSHandler = async (event) => {
     console.log(JSON.stringify(error));
   }
 };
+//bad Image handler

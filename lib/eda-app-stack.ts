@@ -13,7 +13,6 @@ import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 // const s3Client = new S3Client({ region: "your-region" });
 

@@ -1,4 +1,3 @@
-//refactor to rejection mailer instead of confirmation.
 import { SQSHandler } from "aws-lambda";
 import { SES_EMAIL_FROM, SES_EMAIL_TO, SES_REGION } from "../env";
 import {
@@ -40,8 +39,18 @@ export const handler: SQSHandler = async (event: any) => {
             email: SES_EMAIL_FROM,
             message: `The submitted image wasn't added to the list due to invalid extension`,
           };
+          if(srcKey.includes("jpeg") || srcKey.includes("png"))
+          {
+            console.log("Valid image");
+
+          } else {
+          console.log("Invalid image sending mail");
           const params = sendEmailParams({ name, email, message });
           await client.send(new SendEmailCommand(params));
+
+          }
+          // const params = sendEmailParams({ name, email, message });
+          // await client.send(new SendEmailCommand(params));
         } catch (error: unknown) {
           console.log("ERROR is: ", error);
           // return;
