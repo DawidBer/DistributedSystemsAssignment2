@@ -11,12 +11,14 @@ import { BadImage } from "shared/types";
 import { DynamoDB, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { table } from "console";
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
 const s3 = new S3Client();
 const tableName = process.env.IMAGEUPLOADSDB_TABLE;
 const region = 'eu-west-1';
 const dynamoDBClient = new DynamoDBClient({ region });
 const docClient = DynamoDBDocumentClient.from(dynamoDBClient);
+const sqsClient = new SQSClient({ region });
 // const mailerQueueUrl = process.env.MAILER_QUEUE_URL;
 
 
@@ -54,6 +56,8 @@ export const handler: SQSHandler = async (event) => {
           const originalFileName = srcKey.split("/").pop();
           const originalFileNameS = originalFileName?.toString();
 
+          const invalidImagesQue = process.env.INVALIDIMAGES_QUEUE;
+
           console.log("ORGINIAL FILE NAME", originalFileNameS);
 
           const putParams = {
@@ -68,6 +72,13 @@ export const handler: SQSHandler = async (event) => {
               Key: { fileName: originalFileName }
             }
 
+            const message = "Image not added to table invalid image type"
+
+            const invalidQueParams = {
+              QueueUrl: invalidImagesQue,
+              MessageBody: JSON.stringify(message),
+            }
+
           console.log("Table Name: ", tableName);
           console.log("Table Key: ", originalFileName);
 
@@ -79,6 +90,8 @@ export const handler: SQSHandler = async (event) => {
               console.log("Successfully logged image upload");
 
             } else {
+
+              await sqsClient.send(new SendMessageCommand(invalidQueParams))
               throw new Error("Bad Image");
             }
           } 

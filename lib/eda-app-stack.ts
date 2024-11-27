@@ -82,7 +82,10 @@ export class EDAAppStack extends cdk.Stack {
         entry: `${__dirname}/../lambdas/processImage.ts`,
         timeout: cdk.Duration.seconds(15),
         memorySize: 128,
-        environment: { IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName}
+        environment: { 
+          IMAGEUPLOADSDB_TABLE: imageUploadsTable.tableName,
+          INVALIDIMAGES_QUEUE: badImagesQueue.queueUrl,
+        }
       }
     );
 
